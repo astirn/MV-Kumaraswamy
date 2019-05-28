@@ -1,0 +1,28 @@
+# ignore PyCharm IDE Files
+.idea/
+
+# ignore py cache
+__pycache__
+
+# ignore virtual environment
+env/
+venv/
+
+# ignore tex build files
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+
+# ignore non-submitted pdf files
+main.pdf
+models.pdf
+neurips_2019.pdf
+
+# ignore test folder
+test/
+
+# ignore results folder
+results_*/
