@@ -41,8 +41,8 @@ We utilize the [TensorFlow Datasets API](https://www.tensorflow.org/datasets/). 
 
 ## Reproducing Report Images
 
-- `python kumar_sampler.py` will plot and show Figure 1 (among other non-utilized figures).
-- `python kumar_theory.py` will plot and show Figures 2-4 (among other non-utilized figures).
+- `python mv_kumaraswamy_sampler.py` will plot and show Figure 1 (among other non-utilized figures).
+- `python mv_kumaraswamy_theory.py` will plot and show Figures 2-4 (among other non-utilized figures).
 - Figure 5 can be generated multiple ways:
     - `python model_utils.py` will plot and show something similar to Figure 5.
     - `python experiments_ss_run.py --data_set mnist --num_labelled 600 --dim_z 50` will save something similar to Figure 5 for each training epoch into a timestamped results folder.
@@ -62,3 +62,4 @@ We utilize the [TensorFlow Datasets API](https://www.tensorflow.org/datasets/). 
         - `python experiments_ss_run.py --num_runs 4 --data_set svhn_cropped --num_labelled 1000 --dim_z 50`
     - Second run:
         - `python experiments_ss_analyze.py --data_set svhn_cropped`
+
