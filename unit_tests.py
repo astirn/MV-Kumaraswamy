@@ -2,7 +2,7 @@ import time
 import numpy as np
 import tensorflow as tf
 
-from model_utils import load_data_set_balanced
+from model_utils import load_data_set
 
 
 def get_data_split(session, x_batch, y_batch, iterator_init):
@@ -31,7 +31,7 @@ def get_data(seed):
     tf.random.set_random_seed(seed)
 
     # load the data set (custom split method)
-    train_set, _, valid_set, test_set, _ = load_data_set_balanced(
+    train_set, _, valid_set, test_set, _ = load_data_set(
         data_set_name='mnist',
         px_z='Gaussian',
         num_validation=10000,
@@ -49,9 +49,9 @@ def get_data(seed):
     test_iter_init = iterator.make_initializer(test_set)
 
     # start a monitored session
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    with tf.Session(config=config) as sess:
+    cfg = tf.ConfigProto()
+    cfg.gpu_options.allow_growth = True
+    with tf.Session(config=cfg) as sess:
 
         # get the data
         x_train, y_train = get_data_split(sess, x_batch, y_batch, train_iter_init)

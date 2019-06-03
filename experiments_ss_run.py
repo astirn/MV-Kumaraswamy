@@ -4,11 +4,8 @@ import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
 
-# import the common Auto-Encoder object
-from models_proposed import AutoEncodingCommon
-
 # import the training utilities
-from model_utils import load_data_set_balanced, train
+from model_utils import load_data_set, train
 
 # define the methods
 methods = {'Kumaraswamy', 'Softmax', 'KingmaM2'}
@@ -53,7 +50,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_runs', type=int, default=10, help='number of runs')
     parser.add_argument('--data_set', type=str, default='mnist', help='data set name = {mnist, svhn_cropped}')
     parser.add_argument('--num_labelled', type=int, default=600, help='number of labels')
-    parser.add_argument('--dim_z', type=int, default=50, help='data set name = {mnist, svnh}')
+    parser.add_argument('--dim_z', type=int, default=50, help='latent encoding dimensions')
 
     # parse the arguments
     args = parser.parse_args()
@@ -116,7 +113,7 @@ if __name__ == '__main__':
                 tf.random.set_random_seed(seed)
 
                 # load the data set (custom split method)
-                train_set, label_set, valid_set, test_set, set_info = load_data_set_balanced(
+                unlabelled_set, labelled_set, valid_set, test_set, set_info = load_data_set(
                     data_set_name=args.data_set,
                     px_z=data_model,
                     num_validation=10000,
@@ -124,24 +121,25 @@ if __name__ == '__main__':
                     balanced=True,
                     batch_size=b_size)
 
-                # make the common VAE assignments
-                com = AutoEncodingCommon(
-                    dim_x=list(set_info.features['image'].shape),
-                    K=set_info.features['label'].num_classes,
-                    enc_arch=architectures[args.data_set][arch]['enc_arch'],
-                    dec_arch=architectures[args.data_set][arch]['dec_arch'],
-                    learn_rate=architectures[args.data_set][arch]['learn_rate'],
-                    px_z=data_model,
-                    covariance_structure=covariance_structure,
-                    dropout_rate=0.0,
-                    save_dir=dir_dim_z)
+                # configure the common VAE elements
+                config = {
+                    'dim_x': list(set_info.features['image'].shape),
+                    'num_classes': set_info.features['label'].num_classes,
+                    'dim_z': args.dim_z,
+                    'K': set_info.features['label'].num_classes,
+                    'enc_arch': architectures[args.data_set][arch]['enc_arch'],
+                    'dec_arch': architectures[args.data_set][arch]['dec_arch'],
+                    'learn_rate': architectures[args.data_set][arch]['learn_rate'],
+                    'px_z': data_model,
+                    'covariance_structure': covariance_structure,
+                    'dropout_rate': 0.0,
+                    'save_dir': dir_dim_z}
 
                 # run training
-                train(common=com,
-                      method=method,
-                      dim_z=args.dim_z,
-                      train_set=train_set,
-                      label_set=label_set,
+                train(method=method,
+                      config=config,
+                      unlabelled_set=unlabelled_set,
+                      labelled_set=labelled_set,
                       valid_set=valid_set,
                       test_set=test_set,
                       n_epochs=n_epochs)

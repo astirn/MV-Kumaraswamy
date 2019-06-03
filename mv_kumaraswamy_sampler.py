@@ -4,83 +4,93 @@ from scipy.stats import beta
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
-def plot_marginal_dirichlet_fit(pi, alpha_target, loss, name):
 
-    # get number of classes
-    K = len(alpha_target)
+class StickBreakingProcess(object):
 
-    # get number of plots and determine plot arrangement
-    num_plots = 1 + K
-    num_rows = 3
-    num_cols = int(np.ceil(num_plots / num_rows))
+    def __init__(self):
 
-    # declare plot
-    fig, ax = plt.subplots(num_rows, num_cols, figsize=(16, 10))
-    ax = ax.reshape(-1)
+        # set number of test samples to be used after fitting the distribution
+        self.num_test_samples = int(1e5)
 
-    # plot learning curve
-    ax[0].set_title('Training Objective: $D_{kl}(q || p)$')
-    ax[0].plot(np.arange(1, 1 + len(loss)), loss, 'k-', lw=2, alpha=0.6, label='Dkl')
-    ax[0].set_xlabel('Iteration')
-    ax[0].set_ylabel('$D_{kl}(q || p)$')
+    def plot_marginal_dirichlet_fit(self, pi, alpha_target, d_kl, dist_name):
+        """
+        :param pi: samples of simplex random variables
+        :param alpha_target: parameters of target Dirichlet
+        :param d_kl: KL-Divergence objective (for plotting purposes)
+        :param dist_name: name of distribution used to generate pi (for plotting purposes)
+        :return: None
+        """
+        # get number of classes
+        K = len(alpha_target)
 
-    # take some samples from a true Dirichlet
-    pi_true = np.random.dirichlet(alpha_target, int(1e5))
+        # get number of plots and determine plot arrangement
+        num_plots = 1 + K
+        num_rows = 3
+        num_cols = int(np.ceil(num_plots / num_rows))
 
-    # compute useful term
-    alpha_target_0 = np.sum(alpha_target)
+        # declare plot
+        fig, ax = plt.subplots(num_rows, num_cols, figsize=(16, 10))
+        ax = ax.reshape(-1)
 
-    # loop over the Beta marginals
-    for k in range(K):
+        # plot learning curve
+        ax[0].set_title('Training Objective: $D_{kl}(q || p)$')
+        ax[0].plot(np.arange(1, 1 + len(d_kl)), d_kl, 'k-', lw=2, alpha=0.6, label='Dkl')
+        ax[0].set_xlabel('Iteration')
+        ax[0].set_ylabel('$D_{kl}(q || p)$')
 
-        # subplot title
-        ax[1 + k].set_title('Beta Marginal for $\\pi_{' + str(k + 1) + '}$')
-        ax[1 + k].set_xlabel('$\\pi_{' + str(k + 1) + '}$')
-        ax[1 + k].set_ylabel('Density')
+        # take some samples from a true Dirichlet
+        pi_true = np.random.dirichlet(alpha_target, self.num_test_samples)
 
-        # set true Beta marginal evaluation points
-        x = np.linspace(beta.ppf(0.01, alpha_target[k], alpha_target_0 - alpha_target[k]),
-                        beta.ppf(0.99, alpha_target[k], alpha_target_0 - alpha_target[k]),
-                        100)
+        # compute useful term
+        alpha_target_0 = np.sum(alpha_target)
 
-        # plot true Beta marginal pdf
-        ax[1 + k].plot(x, beta.pdf(x, alpha_target[k], alpha_target_0 - alpha_target[k]), 'k-', lw=2, label='pdf')
+        # loop over the Beta marginals
+        for k in range(K):
 
-        # plot histogram densities of generated samples (proposed and true Dirichlet)
-        hist = ax[1 + k].hist([pi[:, k], pi_true[:, k]],
-                              density=True,
-                              histtype='stepfilled',
-                              alpha=0.2,
-                              bins=100,
-                              label=(name, 'Dirichlet'))
+            # subplot title
+            ax[1 + k].set_title('Beta Marginal for $\\pi_{' + str(k + 1) + '}$')
+            ax[1 + k].set_xlabel('$\\pi_{' + str(k + 1) + '}$')
+            ax[1 + k].set_ylabel('Density')
 
-        # enable the legend
-        ax[1 + k].legend()
+            # set true Beta marginal evaluation points
+            x = np.linspace(beta.ppf(0.01, alpha_target[k], alpha_target_0 - alpha_target[k]),
+                            beta.ppf(0.99, alpha_target[k], alpha_target_0 - alpha_target[k]),
+                            100)
 
-        # limit y-axis appropriately for non-saturating Beta distributions
-        ax[1 + k].set_ylim(0, 1.25 * max([np.max(x) for x in hist[0]]))
+            # plot true Beta marginal pdf
+            ax[1 + k].plot(x, beta.pdf(x, alpha_target[k], alpha_target_0 - alpha_target[k]), 'k-', lw=2, label='pdf')
 
-    # make it tight
-    plt.tight_layout()
+            # plot histogram densities of generated samples (proposed and true Dirichlet)
+            hist = ax[1 + k].hist([pi[:, k], pi_true[:, k]],
+                                  density=True,
+                                  histtype='stepfilled',
+                                  alpha=0.2,
+                                  bins=100,
+                                  label=(dist_name, 'Dirichlet'))
+
+            # enable the legend
+            ax[1 + k].legend()
+
+            # limit y-axis appropriately for non-saturating Beta distributions
+            ax[1 + k].set_ylim(0, 1.25 * max([np.max(x) for x in hist[0]]))
+
+        # make it tight
+        plt.tight_layout()
 
 
-class KumaraswamyDirichletSampler(object):
+class KumaraswamyStickBreakingProcess(StickBreakingProcess):
 
-    def __init__(self, K=None, taylor_order=10):
+    def __init__(self, dkl_taylor_order=10):
         """
         :param K: number of classes
-        :param taylor_order: Taylor expansion approximation order for the KL-divergence computation
+        :param dkl_taylor_order: Taylor expansion approximation order for the KL-divergence computation
         """
-        # save number of classes
-        assert K is None or K >= 2
-        self.K = K
+        # initialize base class
+        StickBreakingProcess.__init__(self)
 
         # save Taylor approximation order
-        assert isinstance(taylor_order, int) and taylor_order >= 1
-        self.M = taylor_order
-
-        # set number of test samples
-        self.N = int(1e5)
+        assert isinstance(dkl_taylor_order, int) and dkl_taylor_order >= 1
+        self.M = dkl_taylor_order
 
     @staticmethod
     def __parameter_rank_check(alpha):
@@ -95,7 +105,7 @@ class KumaraswamyDirichletSampler(object):
 
         return alpha
 
-    def __beta_sampler_parameters(self, alpha):
+    def __stick_break_parameters(self, alpha):
         """
         This function converts a Dirichlet alpha parameter vector to the Beta marginal parameters required by the
         stick-breaking Kumaraswamy-Dirichlet sampling procedure.
@@ -105,10 +115,13 @@ class KumaraswamyDirichletSampler(object):
         # enforce rank
         alpha = self.__parameter_rank_check(alpha)
 
-        # construct Beta marginal parameters
+        # get number of clusters
+        K = alpha.shape.as_list()[-1]
+
+        # compute stick-break parameters
         a = []
         b = []
-        for k in range(self.K - 1):
+        for k in range(K - 1):
             a.append(alpha[:, k])
             b.append(tf.reduce_sum(alpha[:, k+1:], axis=1))
         a = tf.stack(a, axis=1)
@@ -129,12 +142,15 @@ class KumaraswamyDirichletSampler(object):
         if alpha is None:
             return [None] * 2
 
+        # get number of clusters
+        K = alpha.shape.as_list()[-1]
+
         # using randomized permutation
         if use_rand_perm:
 
             # sample permutation indices
             i_perm = tf.contrib.framework.argsort(tf.random_uniform(tf.shape(alpha), minval=0, maxval=1), axis=-1)
-            i_perm = tf.reshape(i_perm, [-1, self.K])  # arg sort returns [None, None] despite documentation
+            i_perm = tf.reshape(i_perm, [-1, K])  # arg sort returns [None, None] despite documentation
 
             # apply permutation since the pi[K] has bias for sparse sampling
             alpha = tf.batch_gather(alpha, i_perm)
@@ -144,8 +160,8 @@ class KumaraswamyDirichletSampler(object):
 
             i_perm = None
 
-        # compute parameter for Beta samplers
-        a, b = self.__beta_sampler_parameters(alpha)
+        # get stick-break parameters
+        a, b = self.__stick_break_parameters(alpha)
 
         # sample uniform noise (setting minimum value > 0 resolves numerical stability issues)
         u = tf.random_uniform(tf.shape(a), minval=1e-4, maxval=1)
@@ -155,7 +171,7 @@ class KumaraswamyDirichletSampler(object):
 
         # convert to a Dirichlet sample approximation via Beta string cutting method
         pi = [x[:, 0]]
-        for j in range(1, self.K - 1):
+        for j in range(1, K - 1):
             pi.append((1 - tf.reduce_sum(tf.stack(pi, axis=-1), axis=-1)) * x[:, j])
         pi.append(1 - tf.reduce_sum(tf.stack(pi, axis=-1), axis=-1))
         pi = tf.stack(pi, axis=1)
@@ -165,23 +181,23 @@ class KumaraswamyDirichletSampler(object):
 
             # construct inverse permutation indices
             i_inv_perm = tf.contrib.framework.argsort(i_perm, axis=-1)
-            i_inv_perm = tf.reshape(i_inv_perm, [-1, self.K])  # once again, arg sort returns [None, None]
+            i_inv_perm = tf.reshape(i_inv_perm, [-1, K])  # once again, arg sort returns [None, None]
 
             # invert permutation
             pi = tf.batch_gather(pi, i_inv_perm)
 
         return pi, i_perm
 
-    def kl_divergence(self, alpha, alpha_prior, i_perm=None, wrt='Dirichlet'):
+    def kl_divergence(self, alpha, alpha_prior, i_perm=None, wrt='Dirichlet-Marginals'):
         """
         Computes the KL divergence between the Kumaraswamy q distributions and the Dirichlet prior's Beta marginals.
         :param alpha: posterior approximation Dirichlet parameters
         :param alpha_prior: prior Dirichlet parameters
         :param i_perm: random permutation indices used during sampling procedure
-        :param wrt: that which the KL divergence is with respect to, either Dirichlet prior or stick-breaking Beta's
+        :param wrt: that which the KL divergence is with respect to, either Dirichlet marginal or Beta stick breaks
         :return: KL divergence of marginal Beta distributions of shape [batch size x K]
         """
-        assert wrt == 'Dirichlet' or wrt == 'BetaSticks'
+        assert wrt in {'Dirichlet-Marginals', 'Beta-Sticks'}
 
         # apply permutation if one was provided
         if i_perm is not None:
@@ -191,7 +207,7 @@ class KumaraswamyDirichletSampler(object):
             alpha_prior = tf.batch_gather(alpha_prior, i_perm)
 
         # take KL divergence w.r.t. to the Dirichlet's marginal Betas
-        if wrt == 'Dirichlet':
+        if wrt == 'Dirichlet-Marginals':
 
             # compute marginal q(pi; a', b') approximation parameters
             a_prime = self.__parameter_rank_check(alpha)
@@ -205,10 +221,10 @@ class KumaraswamyDirichletSampler(object):
         else:
 
             # compute marginal q(pi; a', b') approximation parameters
-            a_prime, b_prime = self.__beta_sampler_parameters(alpha)
+            a_prime, b_prime = self.__stick_break_parameters(alpha)
 
             # compute marginal p(pi; a, b) prior parameters
-            a_prior, b_prior = self.__beta_sampler_parameters(alpha_prior)
+            a_prior, b_prior = self.__stick_break_parameters(alpha_prior)
 
         # KL-Divergence
         kl = (a_prime - a_prior) / a_prime * (-np.euler_gamma - tf.digamma(b_prime) - 1 / b_prime) \
@@ -230,20 +246,17 @@ class KumaraswamyDirichletSampler(object):
         :param K: number of classes to run tests over
         :return: None
         """
-        # set number of classes
-        self.K = K
-
         # begin test session
         tf.reset_default_graph()
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        with tf.Session(config=config) as sess:
+        cfg = tf.ConfigProto()
+        cfg.gpu_options.allow_growth = True
+        with tf.Session(config=cfg) as sess:
 
             # declare parameter placeholder
-            alpha_ph = tf.placeholder(dtype=tf.float32, shape=[self.N, self.K])
+            alpha_ph = tf.placeholder(dtype=tf.float32, shape=[self.num_test_samples, K])
 
             # sample some random values
-            alpha = 10 * np.random.ranf([self.N, self.K])
+            alpha = 10 * np.random.ranf([self.num_test_samples, K])
 
             # ensure probabilities sum to 1
             pi = sess.run(self.sample(alpha_ph)[0], feed_dict={alpha_ph: alpha})
@@ -269,7 +282,7 @@ class KumaraswamyDirichletSampler(object):
         # print success
         print('Kumaraswamy-Dirichlet Sampler unit tests passed!')
 
-    def fit(self, alpha_target, learning_rate=5e-3, num_epochs=int(5e4), use_rand_perm=False, kl_wrt='Dirichlet'):
+    def fit(self, alpha_target, use_rand_perm, kl_wrt, learning_rate=5e-3, num_epochs=int(5e4)):
         """
         This is a test method that minimizes the KL divergence between the Kumarswamy approximations to the target
         Dirichlet's Beta marginals. It will plot the true Beta marginal PDF over histograms for exact marginalized Beta
@@ -278,21 +291,21 @@ class KumaraswamyDirichletSampler(object):
         :param learning_rate: learning rate applied to KL-divergence gradient
         :param num_epochs: number of training epochs
         :param use_rand_perm: whether to use random permutation matrices during sampling and KL divergence computation
-        :param kl_wrt: that which the KL divergence is with respect to, either Dirichlet prior or stick-breaking Beta's
+        :param kl_wrt: that which the KL divergence is with respect to, either Dirichlet marginal or Beta stick breaks
         :return: samples in the simplex
         """
         # get number of classes
-        self.K = len(alpha_target)
+        K = len(alpha_target)
 
         # begin test session
         tf.reset_default_graph()
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        with tf.Session(config=config) as sess:
+        cfg = tf.ConfigProto()
+        cfg.gpu_options.allow_growth = True
+        with tf.Session(config=cfg) as sess:
 
             # declare parameters we wish to fit
             alpha = tf.get_variable('alpha',
-                                    shape=[1, self.K],
+                                    shape=[1, K],
                                     dtype=tf.float32,
                                     initializer=tf.random_uniform_initializer(minval=0, maxval=15))
 
@@ -327,22 +340,28 @@ class KumaraswamyDirichletSampler(object):
             print('Alpha = ', sess.run(alpha))
 
             # take some samples
-            pi = sess.run(self.sample(tf.tile(alpha, tf.constant([self.N, 1])), use_rand_perm=use_rand_perm)[0])
+            pi = sess.run(self.sample(tf.tile(alpha, tf.constant([self.num_test_samples, 1])),
+                                      use_rand_perm=use_rand_perm)[0])
 
             # plot results
-            plot_marginal_dirichlet_fit(pi, alpha_target, loss, 'KDS')
+            self.plot_marginal_dirichlet_fit(pi, alpha_target, loss, 'KDS')
 
         return pi
 
 
-class BetaDirichletSampler(object):
+class BetaStickBreakingProcess(StickBreakingProcess):
 
     def __init__(self):
-        pass
+        # initialize base class
+        StickBreakingProcess.__init__(self)
 
     @staticmethod
     def sample(alpha, n):
-
+        """
+        This method implements the Dirichlet samples via a stick-breaking process using Beta distributions.
+        :param alpha: Dirichlet parameters
+        :return: pi: a Dirichlet sample
+        """
         # squeeze any extra alpha dimensions
         alpha = np.squeeze(alpha)
 
@@ -367,7 +386,12 @@ class BetaDirichletSampler(object):
 
     @staticmethod
     def kl_divergence(alpha, alpha_prior):
-
+        """
+        Computes the KL divergence between two Dirichlet distributions
+        :param alpha: posterior approximation Dirichlet parameters
+        :param alpha_prior: prior Dirichlet parameters
+        :return: KL divergence
+        """
         # compute convenient terms
         alpha_0 = tf.reduce_sum(alpha, axis=-1, keepdims=True)
         beta_0 = tf.reduce_sum(alpha_prior, axis=-1, keepdims=True)
@@ -383,15 +407,20 @@ class BetaDirichletSampler(object):
         return kl
 
     def fit(self, alpha_target, learning_rate=1e-2, num_epochs=int(1e4)):
-
+        """
+        :param alpha_target: target Dirichlet parameters
+        :param learning_rate: learning rate applied to KL-divergence gradient
+        :param num_epochs: number of training epochs
+        :return: None
+        """
         # get number of classes
         K = len(alpha_target)
 
         # begin test session
         tf.reset_default_graph()
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
-        with tf.Session(config=config) as sess:
+        cfg = tf.ConfigProto()
+        cfg.gpu_options.allow_growth = True
+        with tf.Session(config=cfg) as sess:
 
             # declare parameters we wish to fit
             alpha = tf.get_variable('alpha',
@@ -423,14 +452,20 @@ class BetaDirichletSampler(object):
             # take some samples
             alpha_fit = sess.run(alpha)
             print(alpha_fit)
-            pi = self.sample(alpha_fit, int(1e5))
+            pi = self.sample(alpha_fit, self.num_test_samples)
 
             # plot results
-            plot_marginal_dirichlet_fit(pi, alpha_target, loss, 'KBS')
+            self.plot_marginal_dirichlet_fit(pi, alpha_target, loss, 'KBS')
 
 
-def plot_ordering_impact_fit(pi_no_perm, pi_random_perm, alpha_target):
-
+def mv_kumaraswamy_ordering_impact(pi_no_perm, pi_random_perm, alpha_target):
+    """
+    Plots MV Kumaraswamy's ordering's impact on bias (i.e. plots the marginals and shows bias on last dimension)
+    :param pi_no_perm: samples that did not use random permutations
+    :param pi_random_perm: samples that used random permutations
+    :param alpha_target: Dirichlet target parameters
+    :return: None
+    """
     # get number of classes
     K = len(alpha_target)
 
@@ -490,19 +525,19 @@ def plot_ordering_impact_fit(pi_no_perm, pi_random_perm, alpha_target):
 
 if __name__ == '__main__':
 
-    # declare Kumaraswamy-Dirichlet sampler and run unit tests
-    kds = KumaraswamyDirichletSampler()
-    kds.unit_tests()
+    # declare Kumaraswamy stick-breaking sampler and run unit tests
+    ksb = KumaraswamyStickBreakingProcess()
+    ksb.unit_tests()
 
     # demonstrate effect ordering has on approximating sparsity-inducing Dirichlet
     alpha = np.ones(5) / 5
-    pi_no_perm = kds.fit(alpha, use_rand_perm=False, kl_wrt='Dirichlet')
-    pi_random_perm = kds.fit(alpha, use_rand_perm=True, kl_wrt='Dirichlet')
-    plot_ordering_impact_fit(pi_no_perm, pi_random_perm, alpha)
+    pi_no_perm = ksb.fit(alpha, use_rand_perm=False, kl_wrt='Dirichlet-Marginals')
+    pi_random_perm = ksb.fit(alpha, use_rand_perm=True, kl_wrt='Dirichlet-Marginals')
+    mv_kumaraswamy_ordering_impact(pi_no_perm, pi_random_perm, alpha)
     plt.show()
 
-    # declare Beta-Dirichlet sampler
-    bds = BetaDirichletSampler()
+    # declare Beta stick-breaking sampler (samples a Dirichlet random variable)
+    bsb = BetaStickBreakingProcess()
 
     # declare some Dirichlet parameters to fit
     alphas = [np.ones(5),
@@ -516,13 +551,13 @@ if __name__ == '__main__':
     for a in alphas:
 
         # fit Kumaraswamy-Dirichlet sample under various methods
-        kds.fit(a, use_rand_perm=False, kl_wrt='Dirichlet')  # possibly cleanest method-but not accurate w.r.t the model
-        kds.fit(a, use_rand_perm=True, kl_wrt='Dirichlet')  # equiv. to above--perm. has no effect on KL w.r.t Dir.
-        kds.fit(a, use_rand_perm=False, kl_wrt='BetaSticks')  # without random permutation, we incur bias
-        kds.fit(a, use_rand_perm=True, kl_wrt='BetaSticks')   # truest to model--but stochastic (breaks DKL convexity)
+        ksb.fit(a, use_rand_perm=False, kl_wrt='Dirichlet-Marginals')  # not accurate w.r.t the model
+        ksb.fit(a, use_rand_perm=True, kl_wrt='Dirichlet-Marginals')  # same as above--perm. does not affect KL wrt Dir.
+        ksb.fit(a, use_rand_perm=False, kl_wrt='Beta-Sticks')  # without random permutation, we incur bias
+        ksb.fit(a, use_rand_perm=True, kl_wrt='Beta-Sticks')   # truest to model--but stochastic (breaks DKL convexity)
 
         # fit Beta-Dirichlet sampler
-        # bds.fit(a)
+        bsb.fit(a)
 
         # show results
         plt.show()
