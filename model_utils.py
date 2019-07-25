@@ -517,7 +517,7 @@ def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_e
     :return: None
     """
     # make sure the method is supported
-    assert method in {'Kumaraswamy', 'Softmax', 'KingmaM2'}
+    assert method in {'Kumaraswamy', 'Nalisnick', 'Softmax', 'KingmaM2'}
 
     # construct iterator
     iterator = unlabelled_set.make_initializable_iterator()
@@ -544,7 +544,9 @@ def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_e
 
     # construct the model according to method and dim(z)
     if method == 'Kumaraswamy':
-        mdl = AutoEncodingKumaraswamy(x_lat=x, x_obs=x_obs, y_obs=y_obs, **config)
+        mdl = AutoEncodingKumaraswamy(x_lat=x, x_obs=x_obs, y_obs=y_obs, use_rand_perm=True, **config)
+    elif method == 'Nalisnick':
+        mdl = AutoEncodingKumaraswamy(x_lat=x, x_obs=x_obs, y_obs=y_obs, use_rand_perm=False, **config)
     elif method == 'Softmax':
         mdl = AutoEncodingSoftmax(x_lat=x, x_obs=x_obs, y_obs=y_obs, **config)
     elif method == 'KingmaM2' and config['dim_z'] > 0:

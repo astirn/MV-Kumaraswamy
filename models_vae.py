@@ -426,7 +426,7 @@ class VariationalAutoEncoder(object):
 
 class AutoEncodingKumaraswamy(VariationalAutoEncoder):
 
-    def __init__(self, x_lat, x_obs=None, y_obs=None, **kwargs):
+    def __init__(self, x_lat, x_obs=None, y_obs=None, use_rand_perm=True, **kwargs):
         """
         :param x_lat: image data with latent labels
         :param x_obs: image data with observed labels
@@ -443,6 +443,7 @@ class AutoEncodingKumaraswamy(VariationalAutoEncoder):
         x_lat, x_obs, y_obs = self.duplicate_training_data(x_lat, x_obs, y_obs)
 
         # declare MV-Kumaraswamy sampler
+        self.use_rand_perm = use_rand_perm
         self.sampler = KumaraswamyStickBreakingProcess(dkl_taylor_order=5)
 
         # labelled loss
@@ -506,7 +507,7 @@ class AutoEncodingKumaraswamy(VariationalAutoEncoder):
         :return: o~Uniform(Permutations({1,...,K}), pi~StickBreak(Kumaraswamy, alpha, o), z~N(mu_z, sigma_z)
         """
         # sample o uniformly from all permutations and pi from the Kumaraswamy stick-breaking process using ordering o
-        pi, o = self.sampler.sample(alpha)
+        pi, o = self.sampler.sample(alpha, use_rand_perm=self.use_rand_perm)
 
         # sample z using the reparameterization trick
         z = reparameterization_trick(mu_z, sigma_z)
