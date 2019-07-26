@@ -41,7 +41,7 @@ if __name__ == '__main__':
     arch = list(architectures[args.data_set].keys())[0]
 
     # set up path components
-    path_base = os.path.join(os.getcwd(), 'results_ss_mnist')
+    path_base = os.path.join(os.getcwd(), 'results_ss_' + args.data_set)
     path_search = os.path.join(labels, 'Kumaraswamy', arch, 'dim_z_' + str(args.dim_z))
     search = glob.glob(os.path.join(path_base, '*', path_search))
 
