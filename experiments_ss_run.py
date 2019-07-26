@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from model_utils import load_data_set, train
 
 # define the methods
-methods = {'Kumaraswamy', 'Nalisnick', 'Softmax', 'KingmaM2'}
+methods = {'Kumaraswamy', 'Nalisnick', 'Dirichlet', 'Softmax', 'KingmaM2'}
 
 # define the architectures
 architectures = {

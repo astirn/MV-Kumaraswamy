@@ -810,10 +810,11 @@ class AutoEncodingDirichlet(VariationalAutoEncoder):
 
         # get the KL divergences
         d_kl = tf.reduce_mean(dirichlet_posterior.kl_divergence(tf.distributions.Dirichlet(self.alpha_prior)))
-        d_kl += tf.reduce_mean(kl_gaussian(q_mu=mu_z,
-                                           q_sigma=sigma_z,
-                                           p_mu=tf.constant(0, dtype=tf.float32),
-                                           p_sigma=tf.constant(1, dtype=tf.float32)))
+        if self.dim_z > 0:
+            d_kl += tf.reduce_mean(kl_gaussian(q_mu=mu_z,
+                                               q_sigma=sigma_z,
+                                               p_mu=tf.constant(0, dtype=tf.float32),
+                                               p_sigma=tf.constant(1, dtype=tf.float32)))
         # compute total loss
         loss = neg_ll + d_kl
 
@@ -861,10 +862,11 @@ class AutoEncodingDirichlet(VariationalAutoEncoder):
 
         # get the KL divergences
         d_kl = tf.reduce_mean(dirichlet_posterior.kl_divergence(tf.distributions.Dirichlet(self.alpha_prior)))
-        d_kl += tf.reduce_mean(kl_gaussian(q_mu=mu_z,
-                                           q_sigma=sigma_z,
-                                           p_mu=tf.constant(0, dtype=tf.float32),
-                                           p_sigma=tf.constant(1, dtype=tf.float32)))
+        if self.dim_z > 0:
+            d_kl += tf.reduce_mean(kl_gaussian(q_mu=mu_z,
+                                               q_sigma=sigma_z,
+                                               p_mu=tf.constant(0, dtype=tf.float32),
+                                               p_sigma=tf.constant(1, dtype=tf.float32)))
 
         # compute total loss
         loss = neg_ll + d_kl

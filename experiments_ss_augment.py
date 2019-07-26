@@ -13,9 +13,6 @@ from experiments_ss_run import architectures
 
 if __name__ == '__main__':
 
-    # the method to add
-    method = 'Nalisnick'
-
     # model assumptions
     data_model = 'Gaussian'
     covariance_structure = 'diag'
@@ -27,14 +24,14 @@ if __name__ == '__main__':
     # add parser arguments
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num_runs', type=int, default=10, help='number of runs')
+    parser.add_argument('--method', type=str, default='Dirichlet', help='number of runs')
     parser.add_argument('--data_set', type=str, default='mnist', help='data set name = {mnist, svhn_cropped}')
     parser.add_argument('--num_labelled', type=int, default=600, help='number of labels')
     parser.add_argument('--dim_z', type=int, default=50, help='latent encoding dimensions')
 
     # parse the arguments
     args = parser.parse_args()
-    print('Num. runs = {:d}'.format(args.num_runs))
+    print('Method = ', args.method)
     print('Data set = ', args.data_set)
     print('Num. labelled = {:d}'.format(args.num_labelled))
     print('Latent dims = {:d}'.format(args.dim_z))
@@ -55,7 +52,7 @@ if __name__ == '__main__':
         dir_run = path.replace(path_search, '')
         dir_labels = os.path.join(dir_run, 'num_labelled_' + str(args.num_labelled))
         assert os.path.exists(dir_labels)
-        dir_method = os.path.join(dir_labels, method)
+        dir_method = os.path.join(dir_labels, args.method)
         if not os.path.exists(dir_method):
             os.mkdir(dir_method)
         dir_arch = os.path.join(dir_method, arch)
@@ -99,7 +96,7 @@ if __name__ == '__main__':
             'save_dir': dir_dim_z}
 
         # run training
-        train(method=method,
+        train(method=args.method,
               config=config,
               unlabelled_set=unlabelled_set,
               labelled_set=labelled_set,

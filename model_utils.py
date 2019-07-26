@@ -716,7 +716,7 @@ if __name__ == '__main__':
         'save_dir': None}
 
     # run training
-    train(method='Dirichlet',
+    train(method='Kumaraswamy',
           config=config,
           unlabelled_set=unlabelled_set,
           labelled_set=labelled_set,
