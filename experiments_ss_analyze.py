@@ -64,7 +64,10 @@ for num_labels in num_labelled:
                 class_err = []
                 log_ll = []
                 for result_dir in result_dirs:
-                    with open(os.path.join(result_dir, 'perf.pkl'), 'rb') as f:
+                    pkl_path = os.path.join(result_dir, 'perf.pkl')
+                    if not os.path.exists(pkl_path):
+                        continue
+                    with open(pkl_path, 'rb') as f:
                         perf = pickle.load(f)
                     class_err.append(perf['class_err']['test'][np.argmin(perf['class_err']['validation'])])
                     log_ll.append(-perf['neg_ll']['test'][np.argmin(perf['neg_ll']['validation'])])
