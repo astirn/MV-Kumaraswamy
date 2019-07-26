@@ -655,6 +655,223 @@ class AutoEncodingKumaraswamy(VariationalAutoEncoder):
         return loss, neg_ll, d_kl
 
 
+class AutoEncodingDirichlet(VariationalAutoEncoder):
+
+    def __init__(self, x_lat, x_obs=None, y_obs=None, **kwargs):
+        """
+        :param x_lat: image data with latent labels
+        :param x_obs: image data with observed labels
+        :param y_obs: labels for x_obs
+        :param kwargs: configuration dictionary for the base VAE class
+        """
+        # initialize base class
+        VariationalAutoEncoder.__init__(self, **kwargs)
+
+        # set the training task type (i.e. unsupervised or semi-supervised)
+        self.set_task_type(x_obs=x_obs, y_obs=y_obs)
+
+        # duplicate data for MC sampling
+        x_lat, x_obs, y_obs = self.duplicate_training_data(x_lat, x_obs, y_obs)
+
+        # labelled loss
+        self.loss_labelled, self.neg_ll_labelled, self.dkl_labelled = self.__loss_labelled(x_obs, y_obs)
+
+        # unlabelled loss
+        self.loss_unlabelled, self.neg_ll_unlabelled, self.dkl_unlabelled = self.__loss_unlabelled(x_lat)
+
+        # compute re-weighted objective
+        self.loss = self.loss_unlabelled + self.loss_labelled
+
+        # configure training operation
+        self.train_op = tf.contrib.layers.optimize_loss(loss=self.loss,
+                                                        global_step=self.global_step,
+                                                        learning_rate=self.learning_rate,
+                                                        optimizer=self.optimizer,
+                                                        summaries=['loss', 'gradients'])
+
+        # declare test operations (deactivates neural network regularization methods such as drop out)
+        self.alpha_lat_test, self.mu_x_test, _ = self.__recognition_network(x_lat, training=False)
+        self.alpha_obs_test, _, _ = self.__recognition_network(x_obs, training=False)
+        self.x_recon, _ = self.__generative_network(tf.one_hot(tf.argmax(self.alpha_lat_test, axis=-1), self.K),
+                                                    self.mu_x_test,
+                                                    training=False)
+        self.x_latent = self.latent_representation(self.__generative_network)
+
+    def __recognition_network(self, x, training):
+        """
+        :param x: image data
+        :param training: a boolean that will activate/deactivate drop out accordingly
+        :return: posterior approximation parameters
+        """
+        # if no input, return None
+        if x is None:
+            return [None] * 3
+
+        with tf.variable_scope('RecognitionModel', reuse=tf.AUTO_REUSE):
+
+            # determine dropout usage
+            dropout = self.dropout_prob * tf.constant(float(training), tf.float32)
+
+            # construct base network
+            x = base_encoder_network(x, training, dropout, self.enc_arch)
+
+            # add Dirichlet recognition layer
+            alpha = dirichlet_encoder_layer(x=x, K=self.K)
+
+            # add Gaussian recognition layer if needed
+            if self.dim_z > 0:
+                mu_z, sigma_z = gaussian_encoder_layer(x=x, dim_z=self.dim_z)
+            else:
+                mu_z = sigma_z = None
+
+        return alpha, mu_z, sigma_z
+
+    @staticmethod
+    def __sample_guassian_posterior(mu_z, sigma_z):
+        """
+        :param mu_z: Gaussian mean
+        :param sigma_z: Gaussian covariance
+        :return: z~N(mu_z, sigma_z)
+        """
+        # sample z using the reparameterization trick
+        z = reparameterization_trick(mu_z, sigma_z)
+
+        return z
+
+    def __generative_network(self, y, z, training):
+        """
+        :param y: class label (can be observed or latent)
+        :param z: latent Gaussian variable
+        :param training: a boolean that will activate/deactivate drop out accordingly
+        :return: likelihood model parameters
+        """
+        # if no input, return None
+        if y is None:
+            return [None] * 2
+
+        with tf.variable_scope('GenerativeModel', reuse=tf.AUTO_REUSE):
+
+            # determine dropout usage
+            dropout = self.dropout_prob * tf.constant(float(training), tf.float32)
+
+            # network input
+            if self.dim_z > 0:
+                network_input = tf.concat((y, z), axis=1)
+            else:
+                network_input = y
+
+            # build decoder network according to generative data distribution family
+            if self.px_z == 'Gaussian':
+                mu_x, sigma_x = gaussian_decoder_network(network_input,
+                                                         dropout=dropout,
+                                                         dim_x=self.dim_x,
+                                                         dec_arch=self.dec_arch,
+                                                         covariance_structure=self.covariance_structure,
+                                                         k=1)
+            elif self.px_z == 'Bernoulli':
+                mu_x, sigma_x = bernoulli_decoder_network(network_input,
+                                                          dropout=dropout,
+                                                          dim_x=self.dim_x,
+                                                          dec_arch=self.dec_arch,
+                                                          k=1)
+            else:
+                mu_x = sigma_x = None
+
+        return mu_x, sigma_x
+
+    def __loss_labelled(self, x, y):
+        """
+        :param x: image data
+        :param y: observable image label
+        :return: -ELBO for labelled data
+        """
+        # if no input, return None
+        if x is None or y is None:
+            return [tf.constant(0, dtype=tf.float32)] * 3
+
+        # run recognition network
+        alpha, mu_z, sigma_z = self.__recognition_network(x, training=True)
+
+        # sample from the posterior
+        dirichlet_posterior = tf.distributions.Dirichlet(alpha)
+        pi = dirichlet_posterior.sample()
+        z = self.__sample_guassian_posterior(mu_z, sigma_z)
+
+        # run generative network
+        mu_x, sigma_x = self.__generative_network(y, z, training=True)
+
+        # compute the log likelihood
+        ln_px = self.log_likelihood_decoder(x, mu_x, sigma_x)
+        ln_py = tf.reduce_sum(y * tf.log(pi + LOG_EPSILON), axis=1)
+        ll = ln_px + ln_py
+
+        # take the mean across the batch of the negative log likelihood
+        neg_ll = tf.reduce_mean(-ll)
+
+        # get the KL divergences
+        d_kl = tf.reduce_mean(dirichlet_posterior.kl_divergence(tf.distributions.Dirichlet(self.alpha_prior)))
+        d_kl += tf.reduce_mean(kl_gaussian(q_mu=mu_z,
+                                           q_sigma=sigma_z,
+                                           p_mu=tf.constant(0, dtype=tf.float32),
+                                           p_sigma=tf.constant(1, dtype=tf.float32)))
+        # compute total loss
+        loss = neg_ll + d_kl
+
+        return loss, neg_ll, d_kl
+
+    def __loss_unlabelled(self, x):
+        """
+        :param x: image data
+        :return: -ELBO for unlabelled data
+        """
+        # run recognition network
+        alpha, mu_z, sigma_z = self.__recognition_network(x, training=True)
+
+        # sample from the posterior
+        dirichlet_posterior = tf.distributions.Dirichlet(alpha)
+        pi = dirichlet_posterior.sample()
+        z = self.__sample_guassian_posterior(mu_z, sigma_z)
+
+        # get all possible class labels that we must marginalize over
+        y_all = tf.transpose(tf.eye(self.K, batch_shape=tf.shape(pi)[:1]), [1, 0, 2])
+
+        # run generative network over all possible class labels
+        if self.covariance_structure is None:
+            mu_x_y = tf.map_fn(lambda y: self.__generative_network(y, z, training=True)[0], y_all)
+            sigma_x_y = None
+        else:
+            mu_x_y, sigma_x_y = tf.map_fn(lambda y: self.__generative_network(y, z, training=True),
+                                          y_all,
+                                          dtype=(tf.float32, tf.float32))
+
+        # compute the log likelihood
+        if sigma_x_y is None:
+            ln_px = tf.transpose(tf.map_fn(lambda p: self.log_likelihood_decoder(x, p, None),
+                                           mu_x_y,
+                                           dtype=tf.float32))
+        else:
+            ln_px = tf.transpose(tf.map_fn(lambda p: self.log_likelihood_decoder(x, p[0], p[1]),
+                                           (mu_x_y, sigma_x_y),
+                                           dtype=tf.float32))
+        ln_py = tf.log(pi + LOG_EPSILON)
+        ll = tf.reduce_logsumexp(ln_px + ln_py, axis=-1)
+
+        # take the mean across the batch of the negative log likelihood
+        neg_ll = tf.reduce_mean(-ll)
+
+        # get the KL divergences
+        d_kl = tf.reduce_mean(dirichlet_posterior.kl_divergence(tf.distributions.Dirichlet(self.alpha_prior)))
+        d_kl += tf.reduce_mean(kl_gaussian(q_mu=mu_z,
+                                           q_sigma=sigma_z,
+                                           p_mu=tf.constant(0, dtype=tf.float32),
+                                           p_sigma=tf.constant(1, dtype=tf.float32)))
+
+        # compute total loss
+        loss = neg_ll + d_kl
+
+        return loss, neg_ll, d_kl
+
+
 class AutoEncodingSoftmax(VariationalAutoEncoder):
 
     def __init__(self, x_lat, x_obs=None, y_obs=None, **kwargs):

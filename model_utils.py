@@ -11,7 +11,7 @@ from matplotlib.ticker import FormatStrFormatter
 from scipy.optimize import linear_sum_assignment
 
 # import the models
-from models_vae import AutoEncodingKumaraswamy, AutoEncodingSoftmax, KingmaM2
+from models_vae import AutoEncodingKumaraswamy, AutoEncodingDirichlet, AutoEncodingSoftmax, KingmaM2
 
 
 def pre_process_data(ds, info, px_z):
@@ -517,7 +517,7 @@ def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_e
     :return: None
     """
     # make sure the method is supported
-    assert method in {'Kumaraswamy', 'Nalisnick', 'Softmax', 'KingmaM2'}
+    assert method in {'Kumaraswamy', 'Nalisnick', 'Dirichlet', 'Softmax', 'KingmaM2'}
 
     # construct iterator
     iterator = unlabelled_set.make_initializable_iterator()
@@ -547,6 +547,8 @@ def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_e
         mdl = AutoEncodingKumaraswamy(x_lat=x, x_obs=x_obs, y_obs=y_obs, use_rand_perm=True, **config)
     elif method == 'Nalisnick':
         mdl = AutoEncodingKumaraswamy(x_lat=x, x_obs=x_obs, y_obs=y_obs, use_rand_perm=False, **config)
+    elif method == 'Dirichlet':
+        mdl = AutoEncodingDirichlet(x_lat=x, x_obs=x_obs, y_obs=y_obs, **config)
     elif method == 'Softmax':
         mdl = AutoEncodingSoftmax(x_lat=x, x_obs=x_obs, y_obs=y_obs, **config)
     elif method == 'KingmaM2' and config['dim_z'] > 0:
@@ -714,7 +716,7 @@ if __name__ == '__main__':
         'save_dir': None}
 
     # run training
-    train(method='Kumaraswamy',
+    train(method='Dirichlet',
           config=config,
           unlabelled_set=unlabelled_set,
           labelled_set=labelled_set,
