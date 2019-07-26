@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_runs', type=int, default=10, help='number of runs')
     parser.add_argument('--data_set', type=str, default='mnist', help='data set name = {mnist, svhn_cropped}')
     parser.add_argument('--num_labelled', type=int, default=600, help='number of labels')
-    parser.add_argument('--dim_z', type=int, default=0, help='latent encoding dimensions')
+    parser.add_argument('--dim_z', type=int, default=2, help='latent encoding dimensions')
 
     # parse the arguments
     args = parser.parse_args()
@@ -67,6 +67,7 @@ if __name__ == '__main__':
 
         # if we already have results, continue
         if os.path.exists(os.path.join(dir_dim_z, 'perf.pkl')):
+            print('Skipping', dir_dim_z)
             continue
 
         # set random seed
