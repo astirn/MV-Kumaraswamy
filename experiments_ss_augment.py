@@ -24,7 +24,7 @@ if __name__ == '__main__':
     # add parser arguments
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--method', type=str, default='Dirichlet', help='number of runs')
+    parser.add_argument('--method', type=str, default='Nalisnick', help='number of runs')
     parser.add_argument('--data_set', type=str, default='mnist', help='data set name = {mnist, svhn_cropped}')
     parser.add_argument('--num_labelled', type=int, default=600, help='number of labels')
     parser.add_argument('--dim_z', type=int, default=50, help='latent encoding dimensions')
