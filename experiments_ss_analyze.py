@@ -101,5 +101,5 @@ for num_labels in num_labelled:
                     if p < 0.001:
                         print(method, 'p-value for', metric, '= {:.2e}'.format(p).replace('e', '\\times 10^{') + '}')
                     else:
-                        print(method, 'p-value for', metric, '= {:.2f}'.format(p))
+                        print(method, 'p-value for', metric, '= {:.3f}'.format(p))
 
