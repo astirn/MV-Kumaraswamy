@@ -66,7 +66,7 @@ def irg_variance_test(x, alphas, alpha_prior, N_trials):
     return gradients
 
 
-def mv_kumaraswamy_variance_test(x, alphas, alpha_prior, N_trials):
+def mvk_variance_test(x, alphas, alpha_prior, N_trials):
 
     # get useful numbers
     K = x.shape[0]
@@ -80,7 +80,9 @@ def mv_kumaraswamy_variance_test(x, alphas, alpha_prior, N_trials):
 
     # reset graph with new session
     tf.reset_default_graph()
-    with tf.Session() as sess:
+    cfg = tf.ConfigProto()
+    cfg.gpu_options.allow_growth = True
+    with tf.Session(config=cfg) as sess:
 
         # declare training variable
         alpha_ph = tf.placeholder(tf.float32, [1, K])
@@ -89,14 +91,14 @@ def mv_kumaraswamy_variance_test(x, alphas, alpha_prior, N_trials):
         alpha_prior = tf.constant(alpha_prior, dtype=tf.float32)
 
         # declare sampler
-        sampler = KumaraswamyStickBreakingProcess()
+        sampler = KumaraswamyStickBreakingProcess(dkl_taylor_order=5)
         pi, i_perm = sampler.sample(alpha_ph)
 
         # compute the expected log likelihood
         ll = tf.reduce_sum(x * tf.log(pi))
 
         # compute the ELBO
-        elbo = ll - sampler.kl_divergence(alpha=alpha_ph, alpha_prior=alpha_prior, i_perm=i_perm)
+        elbo = ll - tf.squeeze(sampler.kl_divergence(alpha=alpha_ph, alpha_prior=alpha_prior, i_perm=i_perm))
 
         # compute gradient
         grad = tf.gradients(xs=[alpha_ph], ys=elbo)
@@ -131,7 +133,7 @@ if __name__ == '__main__':
     p_true = np.random.dirichlet(np.ones(K))
     x = np.random.multinomial(n=N, pvals=p_true)
     alphas = np.linspace(1.01, 3.0, 100)
-    grads = irg_variance_test(x=x, alphas=alphas, alpha_prior=np.ones(K), N_trials=100)
+    grads = mvk_variance_test(x=x, alphas=alphas, alpha_prior=np.ones(K), N_trials=100)
 
     # take the variance across samples
     grad_var = np.var(grads, axis=1)
