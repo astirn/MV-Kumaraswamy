@@ -66,7 +66,7 @@ def irg_variance_test(x, alphas, alpha_prior, N_trials):
     return gradients
 
 
-def mvk_variance_test(x, alphas, alpha_prior, N_trials):
+def mvk_variance_test(x, alphas, alpha_prior, N_trials, mc_samples=10):
 
     # get useful numbers
     K = x.shape[0]
@@ -85,20 +85,23 @@ def mvk_variance_test(x, alphas, alpha_prior, N_trials):
     with tf.Session(config=cfg) as sess:
 
         # declare training variable
-        alpha_ph = tf.placeholder(tf.float32, [None, K])
+        alpha_ph = tf.placeholder(tf.float32, [1, K])
+
+        # duplicate it for MC-sampling
+        alpha_mc = tf.tile(alpha_ph, [mc_samples, 1])
 
         # set prior as a TF constant
         alpha_prior = tf.constant(alpha_prior, dtype=tf.float32)
 
         # declare sampler
         sampler = KumaraswamyStickBreakingProcess(dkl_taylor_order=5)
-        pi, i_perm = sampler.sample(alpha_ph)
+        pi, i_perm = sampler.sample(alpha_mc)
 
         # compute the expected log likelihood
-        ll = tf.reduce_mean(tf.reduce_sum(x * tf.log(pi), axis=1))
+        ll = tf.reduce_mean(tf.reduce_sum(x * tf.log(pi + 1e-6), axis=1))
 
         # compute the ELBO
-        elbo = ll - tf.reduce_mean(sampler.kl_divergence(alpha=alpha_ph, alpha_prior=alpha_prior, i_perm=i_perm))
+        elbo = ll - tf.reduce_mean(sampler.kl_divergence(alpha=alpha_mc, alpha_prior=alpha_prior, i_perm=i_perm))
 
         # compute gradient
         grad = tf.gradients(xs=[alpha_ph], ys=elbo)
@@ -107,16 +110,18 @@ def mvk_variance_test(x, alphas, alpha_prior, N_trials):
         for i in range(len(alphas)):
 
             # set alpha for this test
-            alpha = alpha_star * np.ones([N_trials, K])
-            alpha[:, 0] = alphas[i]
+            alpha = alpha_star * np.ones([1, K])
+            alpha[0, 0] = alphas[i]
 
-            # compute the gradient over the trials
-            gradients[i] = sess.run(grad, feed_dict={alpha_ph: alpha})[0]
+            # compute the gradient over the specified number of trials
+            for j in range(N_trials):
+                gradients[i, j] = sess.run(grad, feed_dict={alpha_ph: alpha})[0]
 
-            # print update
-            a_per = 100 * (i + 1) / len(alphas)
-            update_str = 'Alphas done: {:.2f}%'.format(a_per)
-            print('\r' + update_str, end='')
+                # print update
+                a_per = 100 * (i + 1) / len(alphas)
+                n_per = 100 * (j + 1) / N_trials
+                update_str = 'Alphas done: {:.2f}%, Trials done: {:.2f}%'.format(a_per, n_per)
+                print('\r' + update_str, end='')
 
         print('')
 
