@@ -26,3 +26,8 @@ test/
 
 # ignore results folder
 results_*/
+
+# ignore certain ARS repo files
+ars-reparameterization/dirichlet/.ipynb_checkpoints/
+*.npy
+*.pdf
