@@ -625,15 +625,16 @@ def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_e
             perf = set_performance(mdl, sess, y, valid_iter_init, perf, 'validation', i)
             perf = set_performance(mdl, sess, y, test_iter_init, perf, 'test', i)
 
-            # plot learning curve
-            plot_learning_curve(fig_learn, perf, epoch, mdl.task_type, save_path=mdl.save_dir)
-
-            # plot reconstructed image(s)
-            x_orig, alpha, x_recon = random_concentration_and_reconstruction_per_class(mdl, sess, x, y, test_iter_init)
-            mdl.plot_random_reconstruction(x_orig, x_recon, alpha, epoch=epoch)
-
-            # plot latent representation
-            mdl.plot_latent_representation(sess, epoch=epoch)
+            # TODO: uncomment this for plots!
+            # # plot learning curve
+            # plot_learning_curve(fig_learn, perf, epoch, mdl.task_type, save_path=mdl.save_dir)
+            #
+            # # plot reconstructed image(s)
+            # x_orig, alpha, x_recon = random_concentration_and_reconstruction_per_class(mdl, sess, x, y, test_iter_init)
+            # mdl.plot_random_reconstruction(x_orig, x_recon, alpha, epoch=epoch)
+            #
+            # # plot latent representation
+            # mdl.plot_latent_representation(sess, epoch=epoch)
 
             # find the best evidence and classification performances
             i_best_elbo = np.argmin(perf['elbo']['validation'][:epoch])
@@ -660,7 +661,7 @@ def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_e
             print('Time for Epoch = {:f}'.format(stop - start))
 
             # early stop check
-            epochs_since_improvement = min(i - i_best_elbo, i - i_best_class)
+            epochs_since_improvement = i - i_best_class  # min(i - i_best_elbo, i - i_best_class)
             print('Early stop checks: {:d} / {:d}\n'.format(epochs_since_improvement, early_stop_buffer))
             if epochs_since_improvement >= early_stop_buffer:
                 break
