@@ -49,6 +49,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--num_runs', type=int, default=10, help='number of runs')
     parser.add_argument('--data_set', type=str, default='mnist', help='data set name = {mnist, svhn_cropped}')
+    parser.add_argument('--dir_prefix', type=str, default='new_results_ss_', help='results directory prefix')
     parser.add_argument('--num_labelled', type=int, default=600, help='number of labels')
     parser.add_argument('--dim_z', type=int, default=50, help='latent encoding dimensions')
 
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     print('Latent dims = {:d}'.format(args.dim_z))
 
     # if results directory doesn't yet exist for this data set, make one
-    dir_results = os.path.join(os.getcwd(), 'results_ss_' + args.data_set)
+    dir_results = os.path.join(os.getcwd(), args.dir_prefix + args.data_set)
     if not os.path.exists(dir_results):
         os.mkdir(dir_results)
 
@@ -68,9 +69,12 @@ if __name__ == '__main__':
     cnt = 0
     for _ in range(args.num_runs):
 
+        # get use the time for this seed
+        seed = int(time.time())
+
         # make a fresh directory for this run
-        dir_run = str(time.time())
-        dir_run = os.path.join(dir_results, dir_run[:dir_run.index('.')])
+        dir_run = str(seed)
+        dir_run = os.path.join(dir_results, dir_run)
         os.mkdir(dir_run)
 
         # make the method directory
@@ -108,7 +112,6 @@ if __name__ == '__main__':
                       '| dim_z =', args.dim_z)
 
                 # set random seed
-                seed = np.uint32(hash(dir_run))
                 np.random.seed(seed)
                 tf.random.set_random_seed(seed)
 
