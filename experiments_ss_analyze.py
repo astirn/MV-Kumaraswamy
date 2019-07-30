@@ -11,18 +11,22 @@ from experiments_ss_run import methods, architectures
 # add parser arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_set', type=str, default='mnist', help='data set name = {mnist, svhn_cropped}')
+parser.add_argument('--dir_prefix', type=str, default='new_results_ss_', help='results directory prefix')
 args = parser.parse_args()
 
 # default modeling assumptions
 data_model = 'Gaussian'
 covariance_structure = 'diag'
 
+# base directory
+base_dir = args.dir_prefix + args.data_set
+
 # find all labellings
-num_labelled = [str(x) for x in Path(os.path.join(os.getcwd(), 'results_ss_' + args.data_set)).glob('**/num_labelled_*/')]
+num_labelled = [str(x) for x in Path(os.path.join(os.getcwd(), base_dir)).glob('**/num_labelled_*/')]
 num_labelled = np.unique([int(os.path.split(x)[1].replace('num_labelled_', '')) for x in num_labelled])
 
 # find all latent dimensions
-z_dims = [str(x) for x in Path(os.path.join(os.getcwd(), 'results_ss_' + args.data_set)).glob('**/dim_*/')]
+z_dims = [str(x) for x in Path(os.path.join(os.getcwd(), base_dir)).glob('**/dim_*/')]
 z_dims = np.unique([int(os.path.split(x)[1].replace('dim_z_', '')) for x in z_dims])
 
 # arrange methods
@@ -57,7 +61,7 @@ for num_labels in num_labelled:
                                           'dim_z_{:d}'.format(dim_z))
 
                 # find all results for this configuration
-                result_dirs = Path(os.path.join(os.getcwd(), 'results_ss_' + args.data_set)).glob(os.path.join('**', folder_str))
+                result_dirs = Path(os.path.join(os.getcwd(), base_dir)).glob(os.path.join('**', folder_str))
                 result_dirs = [str(x) for x in result_dirs]
 
                 # accumulate the results
@@ -97,7 +101,8 @@ for num_labels in num_labelled:
                                                 nobs1=t_test_dict['Kumaraswamy'][metric]['N'],
                                                 mean2=t_test_dict[method][metric]['mean'],
                                                 std2=t_test_dict[method][metric]['std'],
-                                                nobs2=t_test_dict[method][metric]['N'])
+                                                nobs2=t_test_dict[method][metric]['N'],
+                                                equal_var=False)
                     if p < 0.001:
                         print(method, 'p-value for', metric, '= {:.2e}'.format(p).replace('e', '\\times 10^{') + '}')
                     else:
