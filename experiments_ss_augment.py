@@ -68,7 +68,7 @@ if __name__ == '__main__':
             continue
 
         # set random seed
-        seed = np.uint32(hash(dir_run))
+        seed = int(dir_run.replace(path_base, '').replace(os.sep, ''))
         np.random.seed(seed)
         tf.random.set_random_seed(seed)
 

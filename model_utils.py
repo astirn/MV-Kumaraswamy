@@ -661,7 +661,7 @@ def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_e
             print('Time for Epoch = {:f}'.format(stop - start))
 
             # early stop check
-            epochs_since_improvement = i - i_best_class  # min(i - i_best_elbo, i - i_best_class)
+            epochs_since_improvement = min(i - i_best_elbo, i - i_best_class)
             print('Early stop checks: {:d} / {:d}\n'.format(epochs_since_improvement, early_stop_buffer))
             if epochs_since_improvement >= early_stop_buffer:
                 break
