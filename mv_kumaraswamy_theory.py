@@ -278,7 +278,7 @@ def plot_asymmetries_3_dimensions(dist, title=None, nlevels=200, subdiv=4):
 
     # plot the expected (symmetric under uniform permutations) distribution
     e_f = [dist.pdf(pi, order=-1) for pi in pi]
-    ax[i_plot].tricontourf(trimesh, e_f, nlevels)
+    ax[i_plot].tricontourf(trimesh, e_f, nlevels, vmin=0)
     ax[i_plot].set_title('$E[f]$', fontsize=FONT_SIZE_SP_TITLE)
     ax[i_plot].set_ylabel('PDF', fontsize=FONT_SIZE_AXIS_LABEL)
     i_plot += 1
@@ -294,7 +294,7 @@ def plot_asymmetries_3_dimensions(dist, title=None, nlevels=200, subdiv=4):
         order = ''.join([str(o + 1) for o in dist.perms[i]])
 
         # plot the data
-        ax[i_plot].tricontourf(trimesh, f[-1], nlevels)
+        ax[i_plot].tricontourf(trimesh, f[-1], nlevels, vmin=0)
         ax[i_plot].set_title('$f_{' + order + '}$', fontsize=FONT_SIZE_SP_TITLE)
         i_plot += 1
 
@@ -303,17 +303,25 @@ def plot_asymmetries_3_dimensions(dist, title=None, nlevels=200, subdiv=4):
     symmetries = [[1, 2], [0, 2], [0, 1]]
 
     # loop over the symmetries
+    asymmetries = []
+    barycentric_axes = []
     for symmetry in symmetries:
 
         # loop over the orders
         for order in range(-1, len(f)):
 
-            # plot anti-symmetric portion
-            ax[i_plot].tricontourf(trimesh, get_asymmetry(dist, order, pi, symmetry), nlevels)
-            if np.mod(i_plot, cols) == 0:
-                axis = list(axes - set(symmetry))[0]
-                ax[i_plot].set_ylabel('$x_{' + str(axis + 1) + '}$ Asym.', fontsize=FONT_SIZE_AXIS_LABEL)
-            i_plot += 1
+            # collect asymmetries and its axis
+            asymmetries.append(get_asymmetry(dist, order, pi, symmetry))
+            barycentric_axes.extend(list(axes - set(symmetry)))
+
+    # loop over the asymmetries
+    for asymmetry, axis in zip(asymmetries, barycentric_axes):
+
+        # plot anti-symmetric portion
+        ax[i_plot].tricontourf(trimesh, asymmetry, nlevels, vmin=0, vmax=np.max(asymmetries))
+        if np.mod(i_plot, cols) == 0:
+            ax[i_plot].set_ylabel('$x_{' + str(axis + 1) + '}$ Asym.', fontsize=FONT_SIZE_AXIS_LABEL)
+        i_plot += 1
 
     # make it pretty
     for i in range(len(ax)):
