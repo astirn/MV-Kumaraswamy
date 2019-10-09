@@ -43,9 +43,8 @@ We utilize the [TensorFlow Datasets API](https://www.tensorflow.org/datasets/). 
 
 - `python mv_kumaraswamy_sampler.py` will plot and show Figure 1 (among other non-utilized figures).
 - `python mv_kumaraswamy_theory.py` will plot and show Figures 2-4 (among other non-utilized figures).
-- Figure 5 can be generated multiple ways:
-    - `python model_utils.py` will plot and show something similar to Figure 5.
-    - `python experiments_ss_run.py --data_set mnist --num_labelled 600 --dim_z 50` will save something similar to Figure 5 for each training epoch into a timestamped results folder.
+- `ars-reparameterization/dirichlet-multinomial.ipynb` (modified from https://github.com/blei-lab/ars-reparameterization) was used to generate Figure 5.
+- `python model_utils.py` will plot and show something similar to Figure 6.
 
 ## Reproducing Experimental Results
 
