@@ -11,7 +11,7 @@ from experiments_ss_run import methods, architectures
 # add parser arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_set', type=str, default='mnist', help='data set name = {mnist, svhn_cropped}')
-parser.add_argument('--dir_prefix', type=str, default='new_results_ss_', help='results directory prefix')
+parser.add_argument('--dir_prefix', type=str, default='results_ss_', help='results directory prefix')
 args = parser.parse_args()
 
 # default modeling assumptions
@@ -102,9 +102,9 @@ for num_labels in num_labelled:
                                                 mean2=t_test_dict[method][metric]['mean'],
                                                 std2=t_test_dict[method][metric]['std'],
                                                 nobs2=t_test_dict[method][metric]['N'],
-                                                equal_var=False)
-                    if p < 0.001:
+                                                equal_var=True)
+                    if p < 0.01:
                         print(method, 'p-value for', metric, '= {:.2e}'.format(p).replace('e', '\\times 10^{') + '}')
                     else:
-                        print(method, 'p-value for', metric, '= {:.3f}'.format(p))
+                        print(method, 'p-value for', metric, '= {:.2f}'.format(p))
 
