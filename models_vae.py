@@ -26,7 +26,8 @@ class VariationalAutoEncoder(object):
                  px_z,
                  covariance_structure,
                  dropout_rate=0,
-                 save_dir=None):
+                 save_dir=None,
+                 save_plots=False):
         """
         :param dim_x: list containing input shape [length, width, channels]
         :param num_classes: number of real classes
@@ -38,6 +39,7 @@ class VariationalAutoEncoder(object):
         :param covariance_structure: {scalar, diag}
         :param dropout_rate: drop out rate
         :param save_dir: save directory
+        :param save_plots: whether to save plots
         """
         # initialize placeholders
         self.M = tf.placeholder(dtype=tf.int32)
@@ -119,7 +121,7 @@ class VariationalAutoEncoder(object):
         plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0.05, hspace=0)
 
         # set up plot directories if a save director was provided
-        if self.save_dir is not None:
+        if self.save_dir is not None and save_plots:
 
             # set the base directory
             self.recon_fig_dir = os.path.join(self.save_dir, 'reconstruction_figures')

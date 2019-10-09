@@ -504,7 +504,7 @@ def plot_learning_curve(fig, performance, epoch, mode, save_path=None):
         fig.savefig(os.path.join(save_path, 'Learning_Curve.png'), dpi=600)
 
 
-def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_epochs, early_stop_buffer=15):
+def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_epochs, early_stop_lag=15):
     """
     :param method: VAE method {Kumaraswamy, Softmax, KingmaM2}
     :param config: VAE configuration dictionary
@@ -513,7 +513,7 @@ def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_e
     :param valid_set: TensorFlow Dataset object that corresponds to validation data
     :param test_set: TensorFlow Dataset object that corresponds to validation data
     :param n_epochs: number of epochs to run
-    :param early_stop_buffer: early stop look-ahead distance (in epochs)
+    :param early_stop_lag: early stop look-ahead distance (in epochs)
     :return: None
     """
     # make sure the method is supported
@@ -625,36 +625,23 @@ def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_e
             perf = set_performance(mdl, sess, y, valid_iter_init, perf, 'validation', i)
             perf = set_performance(mdl, sess, y, test_iter_init, perf, 'test', i)
 
-            # TODO: uncomment this for plots!
-            # # plot learning curve
-            # plot_learning_curve(fig_learn, perf, epoch, mdl.task_type, save_path=mdl.save_dir)
-            #
-            # # plot reconstructed image(s)
-            # x_orig, alpha, x_recon = random_concentration_and_reconstruction_per_class(mdl, sess, x, y, test_iter_init)
-            # mdl.plot_random_reconstruction(x_orig, x_recon, alpha, epoch=epoch)
-            #
-            # # plot latent representation
-            # mdl.plot_latent_representation(sess, epoch=epoch)
+            # plot learning curve
+            plot_learning_curve(fig_learn, perf, epoch, mdl.task_type, save_path=mdl.save_dir)
 
-            # find the best evidence and classification performances
-            i_best_elbo = np.argmin(perf['elbo']['validation'][:epoch])
-            i_best_class = np.argmin(perf['class_err']['validation'][:epoch])
+            # plot reconstructed image(s)
+            x_orig, alpha, x_recon = random_concentration_and_reconstruction_per_class(mdl, sess, x, y, test_iter_init)
+            mdl.plot_random_reconstruction(x_orig, x_recon, alpha, epoch=epoch)
 
-            # if the current validation ELBO is the best (and we are saving models), save it!
-            if i == i_best_elbo and mdl.save_dir is not None:
-                pass
-                # save_path = mdl.saver.save(sess, os.path.join(mdl.save_dir, 'best_elbo', 'mdl.ckpt'))
-                # print('New best ELBO model! Saving results to ' + save_path)
-
-            # if the current validation classification error is the best (and we are saving models), save it!
-            if i == i_best_class and mdl.save_dir is not None:
-                pass
-                # save_path = mdl.saver.save(sess, os.path.join(mdl.save_dir, 'best_class', 'mdl.ckpt'))
-                # print('New best classification model! Saving results to ' + save_path)
+            # plot latent representation
+            mdl.plot_latent_representation(sess, epoch=epoch)
 
             # pause for plot drawing if we aren't saving
             if mdl.save_dir is None:
                 plt.pause(0.05)
+
+            # find the best evidence and classification performances
+            i_best_elbo = np.argmin(perf['elbo']['validation'][:epoch])
+            i_best_class = np.argmin(perf['class_err']['validation'][:epoch])
 
             # print time for epoch
             stop = time.time()
@@ -662,8 +649,8 @@ def train(method, config, unlabelled_set, labelled_set, valid_set, test_set, n_e
 
             # early stop check
             epochs_since_improvement = min(i - i_best_elbo, i - i_best_class)
-            print('Early stop checks: {:d} / {:d}\n'.format(epochs_since_improvement, early_stop_buffer))
-            if epochs_since_improvement >= early_stop_buffer:
+            print('Early stop checks: {:d} / {:d}\n'.format(epochs_since_improvement, early_stop_lag))
+            if epochs_since_improvement >= early_stop_lag:
                 break
 
     # save the performance
@@ -714,7 +701,8 @@ if __name__ == '__main__':
         'px_z': data_model,
         'covariance_structure': covariance_structure,
         'dropout_rate': drop_out,
-        'save_dir': None}
+        'save_dir': None,
+        'save_plots': False}
 
     # run training
     train(method='Kumaraswamy',
