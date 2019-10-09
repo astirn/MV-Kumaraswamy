@@ -10,6 +10,9 @@ from model_utils import load_data_set, train
 # define the methods
 methods = {'Kumaraswamy', 'Nalisnick', 'Dirichlet', 'Softmax', 'KingmaM2'}
 
+# specify if you want to save plots (other than learning curve)--might be slower
+SAVE_PLOTS = False
+
 # define the architectures
 architectures = {
     'mnist': {
@@ -51,7 +54,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_set', type=str, default='mnist', help='data set name = {mnist, svhn_cropped}')
     parser.add_argument('--dir_prefix', type=str, default='new_results_ss_', help='results directory prefix')
     parser.add_argument('--num_labelled', type=int, default=600, help='number of labels')
-    parser.add_argument('--dim_z', type=int, default=50, help='latent encoding dimensions')
+    parser.add_argument('--dim_z', type=int, default=2, help='latent encoding dimensions')
 
     # parse the arguments
     args = parser.parse_args()
@@ -136,7 +139,8 @@ if __name__ == '__main__':
                     'px_z': data_model,
                     'covariance_structure': covariance_structure,
                     'dropout_rate': 0.0,
-                    'save_dir': dir_dim_z}
+                    'save_dir': dir_dim_z,
+                    'save_plots': SAVE_PLOTS}
 
                 # run training
                 train(method=method,
