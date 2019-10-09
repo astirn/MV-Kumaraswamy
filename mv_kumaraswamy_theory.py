@@ -84,7 +84,13 @@ def stick_breaking(K, pdf):
     # take the expectation
     expected_f = sum(f) / len(f)
 
-    return expected_f, f, X, A, perms
+    # generate all cycles
+    cycles = [tuple(np.roll(np.arange(K), k)) for k in range(K)]
+
+    # get indices for cycles
+    approx_expected_f = sum([f[perms.index(cycle)] for cycle in cycles]) / len(cycles)
+
+    return expected_f, approx_expected_f, f, X, A, perms
 
 
 class Dirichlet(object):
@@ -93,12 +99,14 @@ class Dirichlet(object):
         :param a: K-dimensional parameter vector
         """
         # construct the pdf using the expected stick breaking process and save associated symbols
-        self.expected_f, self.f, self.x, self.a, self.perms = stick_breaking(K=len(a), pdf=beta_pdf)
+        self.expected_f, self.approx_expected_f, self.f, self.x, self.a, self.perms = \
+            stick_breaking(K=len(a), pdf=beta_pdf)
 
         # substitute variables for the non-free dimension
         for x in self.x:
             subs = 1 - sum(list(set(self.x) - {x}))
             self.expected_f = self.expected_f.subs(subs, x)
+            self.approx_expected_f = self.approx_expected_f.subs(subs, x)
             self.f = list(map(lambda f: f.subs(subs, x), self.f))
 
         # print resulting expression
@@ -106,6 +114,7 @@ class Dirichlet(object):
 
         # substitute in parameter values
         self.expected_f = self.expected_f.subs(dict(zip(self.a, a)))
+        self.approx_expected_f = self.approx_expected_f.subs(dict(zip(self.a, a)))
         self.f = [f.subs(dict(zip(self.a, a))) for f in self.f]
 
     def pdf(self, x, order=-1):
@@ -114,11 +123,13 @@ class Dirichlet(object):
         :param order: which sampling order pdf to use, -1 uses the expected pdf
         :return: f(x;a)
         """
-        assert order == -1 or order in range(len(self.f))
+        assert order in {-1, -2} or order in range(len(self.f))
 
         # evaluate the pdf
-        if order < 0:
+        if order == -2:
             return np.float64(self.expected_f.evalf(subs=dict(zip(self.x, x)), chop=True))
+        elif order == -1:
+            return np.float64(self.approx_expected_f.evalf(subs=dict(zip(self.x, x)), chop=True))
         else:
             return np.float64(self.f[order].evalf(subs=dict(zip(self.x, x)), chop=True))
 
@@ -129,13 +140,15 @@ class MultivariateKumaraswamy(object):
         :param a: K-dimensional parameter vector
         """
         # construct the pdf using the expected stick breaking process and save associated symbols
-        self.expected_f, self.f, self.x, self.a, self.perms = stick_breaking(K=len(a), pdf=kumaraswamy_pdf)
+        self.expected_f, self.approx_expected_f, self.f, self.x, self.a, self.perms = \
+            stick_breaking(K=len(a), pdf=kumaraswamy_pdf)
 
         # print resulting expression
         print('MV Kumaraswamy:', 'E[f(x;a)] =', self.expected_f)
 
         # substitute in parameter values
         self.expected_f = self.expected_f.subs(dict(zip(self.a, a)))
+        self.approx_expected_f = self.approx_expected_f.subs(dict(zip(self.a, a)))
         self.f = [f.subs(dict(zip(self.a, a))) for f in self.f]
 
     def pdf(self, x, order=-1):
@@ -144,11 +157,13 @@ class MultivariateKumaraswamy(object):
         :param order: which sampling order pdf to use, -1 uses the expected pdf
         :return: f(x;a)
         """
-        assert order == -1 or order in range(len(self.f))
+        assert order in {-1, -2} or order in range(len(self.f))
 
         # evaluate the pdf
-        if order < 0:
+        if order == -2:
             return np.float64(self.expected_f.evalf(subs=dict(zip(self.x, x)), chop=True))
+        elif order == -1:
+            return np.float64(self.approx_expected_f.evalf(subs=dict(zip(self.x, x)), chop=True))
         else:
             return np.float64(self.f[order].evalf(subs=dict(zip(self.x, x)), chop=True))
 
@@ -271,16 +286,25 @@ def plot_asymmetries_3_dimensions(dist, title=None, nlevels=200, subdiv=4):
 
     # construct the figure
     rows = 4
-    cols = 7
+    cols = 8
     fig, ax = plt.subplots(rows, cols, figsize=(8, 5))
     ax = np.reshape(ax, -1)
     i_plot = 0
 
+    # set the color map
+    cmap = 'jet'
+
     # plot the expected (symmetric under uniform permutations) distribution
-    e_f = [dist.pdf(pi, order=-1) for pi in pi]
-    ax[i_plot].tricontourf(trimesh, e_f, nlevels, vmin=0)
+    e_f = [dist.pdf(pi, order=-2) for pi in pi]
+    ax[i_plot].tricontourf(trimesh, e_f, nlevels, vmin=0, cmap=cmap)
     ax[i_plot].set_title('$E[f]$', fontsize=FONT_SIZE_SP_TITLE)
     ax[i_plot].set_ylabel('PDF', fontsize=FONT_SIZE_AXIS_LABEL)
+    i_plot += 1
+
+    # plot the approximate expected (symmetric under uniform permutations) distribution
+    e_f = [dist.pdf(pi, order=-1) for pi in pi]
+    ax[i_plot].tricontourf(trimesh, e_f, nlevels, vmin=0, cmap=cmap)
+    ax[i_plot].set_title('$\\hat{E}[f]$', fontsize=FONT_SIZE_SP_TITLE)
     i_plot += 1
 
     # loop over the pdf's associated with each stick-breaking order
@@ -294,7 +318,7 @@ def plot_asymmetries_3_dimensions(dist, title=None, nlevels=200, subdiv=4):
         order = ''.join([str(o + 1) for o in dist.perms[i]])
 
         # plot the data
-        ax[i_plot].tricontourf(trimesh, f[-1], nlevels, vmin=0)
+        ax[i_plot].tricontourf(trimesh, f[-1], nlevels, vmin=0, cmap=cmap)
         ax[i_plot].set_title('$f_{' + order + '}$', fontsize=FONT_SIZE_SP_TITLE)
         i_plot += 1
 
@@ -308,7 +332,7 @@ def plot_asymmetries_3_dimensions(dist, title=None, nlevels=200, subdiv=4):
     for symmetry in symmetries:
 
         # loop over the orders
-        for order in range(-1, len(f)):
+        for order in range(-2, len(f)):
 
             # collect asymmetries and its axis
             asymmetries.append(get_asymmetry(dist, order, pi, symmetry))
@@ -318,7 +342,7 @@ def plot_asymmetries_3_dimensions(dist, title=None, nlevels=200, subdiv=4):
     for asymmetry, axis in zip(asymmetries, barycentric_axes):
 
         # plot anti-symmetric portion
-        ax[i_plot].tricontourf(trimesh, asymmetry, nlevels, vmin=0, vmax=np.max(asymmetries))
+        ax[i_plot].tricontourf(trimesh, asymmetry, nlevels, vmin=0, vmax=np.max(asymmetries), cmap=cmap)
         if np.mod(i_plot, cols) == 0:
             ax[i_plot].set_ylabel('$x_{' + str(axis + 1) + '}$ Asym.', fontsize=FONT_SIZE_AXIS_LABEL)
         i_plot += 1
