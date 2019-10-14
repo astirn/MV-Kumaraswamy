@@ -47,18 +47,27 @@ We utilize the [TensorFlow Datasets API](https://www.tensorflow.org/datasets/). 
 - `python model_utils.py` will plot and show something similar to Figure 6.
 
 ## Reproducing Experimental Results
+To fully rerun our experiments, we recommend defining a new and unused data directory prefix. For example, 'your_results_' suffices.
 
 - Table 1:
     - First run and wait for completion:
-        - `python experiments_ss_run.py --num_runs 10 --data_set mnist --num_labelled 600 --dim_z 0`
-        - `python experiments_ss_run.py --num_runs 10 --data_set mnist --num_labelled 600 --dim_z 2`
-        - `python experiments_ss_run.py --num_runs 10 --data_set mnist --num_labelled 600 --dim_z 50`
+        - `python experiments_ss_run.py --dir_prefix your_results_ --num_runs 10 --data_set mnist --num_labelled 600 --dim_z 0`
+        - `python experiments_ss_run.py --dir_prefix your_results_ --num_runs 10 --data_set mnist --num_labelled 600 --dim_z 2`
+        - `python experiments_ss_run.py --dir_prefix your_results_ --num_runs 10 --data_set mnist --num_labelled 600 --dim_z 50`
     - Second run:
-        - `python experiments_ss_analyze.py --data_set mnist`     
+        - `python experiments_ss_analyze.py --dir_prefix your_results_ --data_set mnist`     
         
 - Table 2:
     - First run and wait for completion:
-        - `python experiments_ss_run.py --num_runs 4 --data_set svhn_cropped --num_labelled 1000 --dim_z 50`
+        - `python experiments_ss_run.py --dir_prefix your_results_ --num_runs 4 --data_set svhn_cropped --num_labelled 1000 --dim_z 50`
     - Second run:
-        - `python experiments_ss_analyze.py --data_set svhn_cropped`
+        - `python experiments_ss_analyze.py --dir_prefix your_results_ --data_set svhn_cropped`
 
+## Saved Experimental Results
+
+- `results_ss_mnist` and `results_ss_svhn_cropped` contain the results from our original submission. Per reviewer feedback, we augmented this data with some additional baselines. However, these new baselines were not guaranteed to experience the same data folds. To analyze this data call the following:
+    - `python experiments_ss_analyze.py --dir_prefix results_ss_ --data_set mnist` 
+    - `python experiments_ss_analyze.py --dir_prefix results_ss_ --data_set svhn_cropped` 
+- To prepare our camera-ready submission, we reran all experiments such that all baselines would experience the same data folds. This "new" data is contained in `new_results_ss_mnist` and `new_results_ss_svhn_cropped`. These new sets can be analyzed with:
+    - `python experiments_ss_analyze.py --dir_prefix new_results_ss_ --data_set mnist` 
+    - `python experiments_ss_analyze.py --dir_prefix new_results_ss_ --data_set svhn_cropped` 
