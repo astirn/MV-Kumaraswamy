@@ -24,8 +24,13 @@ neurips_2019.pdf
 # ignore test folder
 test/
 
-# ignore results folder
-*results_*/
+# ignore deprecate result formats
+results_deprecated/
+
+# ignore images within the results folders
+latent_space_figures/
+reconstruction_figures/
+Learning_Curve.png
 
 # ignore certain ARS repo files
 ars-reparameterization/dirichlet/.ipynb_checkpoints/
