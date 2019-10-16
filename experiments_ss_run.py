@@ -53,7 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_runs', type=int, default=4, help='number of runs')
     parser.add_argument('--data_set', type=str, default='svhn_cropped', help='data set name = {mnist, svhn_cropped}')
     parser.add_argument('--dir_prefix', type=str, default='new_results_ss_', help='results directory prefix')
-    parser.add_argument('--num_labelled', type=int, default=600, help='number of labels')
+    parser.add_argument('--num_labelled', type=int, default=1000, help='number of labels')
     parser.add_argument('--dim_z', type=int, default=50, help='latent encoding dimensions')
 
     # parse the arguments
