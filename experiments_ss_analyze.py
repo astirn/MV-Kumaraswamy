@@ -10,7 +10,7 @@ from experiments_ss_run import methods, architectures
 
 # add parser arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('--data_set', type=str, default='mnist', help='data set name = {mnist, svhn_cropped}')
+parser.add_argument('--data_set', type=str, default='svhn_cropped', help='data set name = {mnist, svhn_cropped}')
 parser.add_argument('--dir_prefix', type=str, default='new_results_ss_', help='results directory prefix')
 args = parser.parse_args()
 
