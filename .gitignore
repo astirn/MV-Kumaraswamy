@@ -34,5 +34,5 @@ Learning_Curve.png
 
 # ignore certain ARS repo files
 ars-reparameterization/dirichlet/.ipynb_checkpoints/
-*.npy
-*.pdf
+ars-reparameterization/dirichlet/*.npy
+ars-reparameterization/dirichlet/*.pdf
